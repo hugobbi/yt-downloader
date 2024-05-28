@@ -1,0 +1,3 @@
+- indicar url
+- barra de progresso de download
+- opção para indicar timestamps
