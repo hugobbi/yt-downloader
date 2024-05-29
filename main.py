@@ -6,7 +6,7 @@ def main():
     controller.url = url
     controller.download()
     controller.trim_timestamps["start"] = [0, 0, 0]
-    controller.trim_timestamps["end"] = [0, 1, 0]
+    controller.trim_timestamps["end"] = [0, 0, 1]
     controller.trim_audio_file(controller.save_path)
 
 if __name__ == '__main__':

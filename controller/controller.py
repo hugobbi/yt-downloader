@@ -1,7 +1,7 @@
 import yt_dlp
 import os
 from pydub import AudioSegment
-from utils.utils import get_current_time_string, get_time_milliseconds
+from utils.utils import get_time_milliseconds, get_latest_file
 from typing import Dict, List
 from random import randint
 
@@ -26,7 +26,7 @@ class Controller:
     
     @property
     def save_path(self) -> str:
-        return self.save_dir + self.save_filename
+        return os.path.join(self.save_dir, self.save_filename)
     
     def download(self) -> None:
         with yt_dlp.YoutubeDL(self.ydl_opts) as ydl:
@@ -40,10 +40,14 @@ class Controller:
             self.ydl_opts['outtmpl']['default'] = self.save_path
 
             ydl.download([self.url])
+            # In order to have the full name of the file, not just the template string
+            self.save_filename = get_latest_file(self.save_dir)
     
     def trim_audio_file(self, filepath: str) -> None:
         time_start = get_time_milliseconds(self.trim_timestamps['start'])
         time_end = get_time_milliseconds(self.trim_timestamps['end'])
+
+        print(filepath)
 
         # Sketchy code to get full name of file (when downloading mp3, the extension is added 
         # by default, so it is not on the filename variable)
@@ -51,8 +55,12 @@ class Controller:
 
         audio = AudioSegment.from_mp3(filepath)
         audio = audio[time_start:] if time_end == 0 else audio[time_start:time_end]
+
+        directory, file = os.path.split(filepath)
+        file_no_extension, extention = os.path.splitext(file)
+        filepath = os.path.join(directory, file_no_extension + '_trimmed' + extention)
         
-        audio.export(filepath + "_trimed", format="mp3")
+        audio.export(filepath, format="mp3")
 
 
         
