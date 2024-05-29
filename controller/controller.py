@@ -1,7 +1,9 @@
 import yt_dlp
 import os
-from utils.utils import get_current_time_string
+from pydub import AudioSegment
+from utils.utils import get_current_time_string, get_time_milliseconds
 from typing import Dict, List
+from random import randint
 
 class Controller:
     def __init__(self) -> None:
@@ -24,24 +26,31 @@ class Controller:
     
     def download(self) -> None:
         with yt_dlp.YoutubeDL(self.ydl_opts) as ydl:
-            if self.save_path == '':
-                os.makedirs('downloads', exist_ok=True)
-                self.save_path = self.default_save_path
+            # if self.save_path == '':
+            #     os.makedirs('downloads', exist_ok=True)
+            #     self.save_path = self.default_save_path
 
-            filename = ''
-            if self.custom_filename == '':
-                info_dict = ydl.extract_info(self.url, download=False)
-                video_title = info_dict.get('title', 'video') + f'_{get_current_time_string()}'
-                filename = video_title
-            else: 
-                filename = self.custom_filename
+            # filename = ''
+            # if self.custom_filename == '':
+            #     info_dict = ydl.extract_info(self.url, download=False)
+            #     video_title = info_dict.get('title', 'video') + f'_{get_current_time_string()}'
+            #     filename = video_title
+            # else: 
+            #     filename = self.custom_filename
 
-            self.save_path += filename 
-            self.ydl_opts['outtmpl']['default'] = self.save_path
+            # self.save_path += filename 
+            # self.ydl_opts['outtmpl']['default'] = self.save_path
+            self.ydl_opts['outtmpl']['default'] = f'%(title)s_aaa{randint(0, 1000)}'
             ydl.download([self.url])
     
     def trim_audio_file(self, filepath: str) -> None:
-        if filepath[-3:] != 'mp3':
-            raise Exception(f"Filetype of {filepath} is not supported to trim.")
+        time_start = get_time_milliseconds(self.trim_timestamps['start'])
+        time_end = get_time_milliseconds(self.trim_timestamps['end'])
+
+        audio = AudioSegment.from_mp3(filepath)
+        audio = audio[time_start:] if time_end == 0 else audio[time_start:time_end]
+        
+        audio.export(filepath + "_trimed", format="mp3")
+
 
         
