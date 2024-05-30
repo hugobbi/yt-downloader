@@ -1,7 +1,7 @@
 import yt_dlp
 import os
 from pydub import AudioSegment
-from utils.utils import get_time_milliseconds, get_latest_file
+from utils.utils import get_time_milliseconds
 from typing import Dict, List
 from random import randint
 
@@ -9,7 +9,7 @@ class Controller:
     def __init__(self) -> None:
         self.ydl_opts: Dict[any] = {
             'format': 'mp3/bestaudio/best',
-            'postprocessors': [{  # Extract audio using ffmpeg
+            'postprocessors': [{  
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
                 'preferredquality': '192'
@@ -23,7 +23,7 @@ class Controller:
         self.save_dir: str = ''
         self.save_filename: str = ''
         self.trim_timestamps: Dict[List[int]] = {'start': [0, 0, 0], 'end': [0, 0, 0]}
-        self.video_title: str = ''
+        self.download_status: Dict[any] = {'progress': '', 'eta': '', 'speed': ''}
 
     @property
     def save_path(self) -> str:
@@ -61,5 +61,10 @@ class Controller:
     
     def __progress_hook(self, d):
         if d['status'] == 'downloading':
-            self.video_title = d.get('info_dict', {}).get('title', 'Unknown title')
-            self.save_filename = self.save_filename.replace('%(title)s', self.video_title)
+            self.download_status['progress'] = d['_percent_str']
+            self.download_status['eta'] = d['_eta_str']
+            self.download_status['speed'] = d['_speed_str']
+            print(f"\n {self.download_status} \n") 
+        if d['status'] == 'finished':
+            self.save_filename = os.path.split(d['filename'])[1]
+
