@@ -11,10 +11,8 @@ def get_time_milliseconds(time: List[int]) -> int:
 
 def get_latest_file(directory: str) -> str:
     files = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
-
     if not files:
         raise Exception(f"Error! No files found in the directory {directory}")
-    
     latest_file = max(files, key=lambda f: os.path.getctime(os.path.join(directory, f)))
 
     return latest_file

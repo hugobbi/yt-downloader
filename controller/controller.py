@@ -15,6 +15,7 @@ class Controller:
                 'preferredquality': '192'
             }],
             'noplaylist': True,
+            'progress_hooks': [self.__progress_hook]
         }
 
         self.url: str = ''
@@ -22,8 +23,8 @@ class Controller:
         self.save_dir: str = ''
         self.save_filename: str = ''
         self.trim_timestamps: Dict[List[int]] = {'start': [0, 0, 0], 'end': [0, 0, 0]}
-        self.should_trim: bool = False
-    
+        self.video_title: str = ''
+
     @property
     def save_path(self) -> str:
         return os.path.join(self.save_dir, self.save_filename)
@@ -33,21 +34,17 @@ class Controller:
             if self.save_dir == '':
                 os.makedirs('downloads', exist_ok=True)
                 self.save_dir = self.default_save_dir
-            
+
             if self.save_filename == '':
-                self.save_filename = f'%(title)s_{randint(0, 1000)}.%(ext)s'
+                self.save_filename = f'%(title)s_{randint(0, 1000)}'  
         
             self.ydl_opts['outtmpl']['default'] = self.save_path
 
             ydl.download([self.url])
-            # In order to have the full name of the file, not just the template string
-            self.save_filename = get_latest_file(self.save_dir)
-    
+
     def trim_audio_file(self, filepath: str) -> None:
         time_start = get_time_milliseconds(self.trim_timestamps['start'])
         time_end = get_time_milliseconds(self.trim_timestamps['end'])
-
-        print(filepath)
 
         # Sketchy code to get full name of file (when downloading mp3, the extension is added 
         # by default, so it is not on the filename variable)
@@ -61,6 +58,8 @@ class Controller:
         filepath = os.path.join(directory, file_no_extension + '_trimmed' + extention)
         
         audio.export(filepath, format="mp3")
-
-
-        
+    
+    def __progress_hook(self, d):
+        if d['status'] == 'downloading':
+            self.video_title = d.get('info_dict', {}).get('title', 'Unknown title')
+            self.save_filename = self.save_filename.replace('%(title)s', self.video_title)
