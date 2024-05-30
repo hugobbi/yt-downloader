@@ -23,7 +23,8 @@ class Controller:
         self.save_dir: str = ''
         self.save_filename: str = ''
         self.trim_timestamps: Dict[List[int]] = {'start': [0, 0, 0], 'end': [0, 0, 0]}
-        self.download_status: Dict[any] = {'progress': '', 'eta': '', 'speed': ''}
+        self.download_status: Dict[any] = {'progress': '', 'eta': '', 'speed': '', 
+                                            'file_size': '', 'elapsed_time': ''}
 
     @property
     def save_path(self) -> str:
@@ -46,25 +47,21 @@ class Controller:
         time_start = get_time_milliseconds(self.trim_timestamps['start'])
         time_end = get_time_milliseconds(self.trim_timestamps['end'])
 
-        # Sketchy code to get full name of file (when downloading mp3, the extension is added 
-        # by default, so it is not on the filename variable)
-        filepath = filepath + '.mp3' if filepath[-3:] != 'mp3' else filepath
-
         audio = AudioSegment.from_mp3(filepath)
         audio = audio[time_start:] if time_end == 0 else audio[time_start:time_end]
 
         directory, file = os.path.split(filepath)
         file_no_extension, extention = os.path.splitext(file)
         filepath = os.path.join(directory, file_no_extension + '_trimmed' + extention)
-        
-        audio.export(filepath, format="mp3")
+
+        audio.export(filepath, format="mp3"), print(f"[TrimAudio] Audio trimmed and saved at {filepath}")
     
     def __progress_hook(self, d):
         if d['status'] == 'downloading':
             self.download_status['progress'] = d['_percent_str']
             self.download_status['eta'] = d['_eta_str']
             self.download_status['speed'] = d['_speed_str']
-            print(f"\n {self.download_status} \n") 
         if d['status'] == 'finished':
-            self.save_filename = os.path.split(d['filename'])[1]
-
+            self.save_filename = os.path.split(d['filename'])[1] + '.mp3' # Adding extension to filename variable (yt_dlp adds by default to saved file)
+            self.download_status['file_size'] = d['total_bytes']
+            self.download_status['elapsed_time'] = d['elapsed']
