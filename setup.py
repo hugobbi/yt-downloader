@@ -6,7 +6,7 @@ setup(
     author_email='hgugobbi@gmail.com',
     version=0.1,
     packages=find_packages(),
-    install_requres=[
+    install_requires=[
         'yt_dlp',
         'pydub'
     ],
