@@ -8,7 +8,8 @@ setup(
     packages=find_packages(),
     install_requires=[
         'yt_dlp',
-        'pydub'
+        'pydub',
+        'customtkinter'
     ],
     url='https://github.com/hugobbi/yt-downloader',
     long_description=open("README.md", encoding="utf-8").read(),
