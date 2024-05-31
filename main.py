@@ -10,7 +10,7 @@ def main():
     # controller.download()
     # controller.trim_audio_file(controller.save_path)
 
-    window = View()
+    window = View(controller)
     window.mainloop()
 
 if __name__ == '__main__':

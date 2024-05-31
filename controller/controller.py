@@ -22,7 +22,7 @@ class Controller:
         self.default_save_dir: str = f'{os.getcwd()}/downloads/'
         self.save_dir: str = ''
         self.save_filename: str = ''
-        self.trim_timestamps: Dict[List[int]] = {'start': [0, 0, 0], 'end': [0, 0, 0]}
+        self.trim_timestamps: Dict[List[int | float]] = {'start': [0, 0, 0], 'end': [0, 0, 0]}
         self.download_status: Dict[any] = {'progress': '', 'eta': '', 'speed': '', 
                                             'file_size': '', 'elapsed_time': ''}
 
