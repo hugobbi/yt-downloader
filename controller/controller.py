@@ -4,6 +4,7 @@ from pydub import AudioSegment
 from utils.utils import get_time_milliseconds
 from typing import Dict, List
 from random import randint
+from enum import Enum
 
 class Controller:
     def __init__(self) -> None:
@@ -27,6 +28,15 @@ class Controller:
         self.download_status: Dict[any] = {'progress': '', 'eta': '', 'speed': '', 
                                             'file_size': '', 'elapsed_time': ''}
         self.is_downloading: bool = False
+        self.state: int = self.State.IDLE
+
+        class State(Enum):
+            IDLE = 0
+            REQUEST = 1
+            DOWNLOADING = 2
+            EXTRACTING = 3
+            TRIMMING = 4
+            DONE = 5
 
     @property
     def save_path(self) -> str:
@@ -63,9 +73,11 @@ class Controller:
             self.download_status['progress'] = d['_percent_str']
             self.download_status['eta'] = d['_eta_str']
             self.download_status['speed'] = d['_speed_str']
-            self.is_downloading = True        
+            self.is_downloading = True
+            self.state = self.State.DOWNLOADING
         if d['status'] == 'finished':
             self.save_filename = os.path.split(d['filename'])[1] + '.mp3' # Adding extension to filename variable (yt_dlp adds by default to saved file)
             self.download_status['file_size'] = d['total_bytes']
             self.download_status['elapsed_time'] = d['elapsed']
             self.is_downloading = False
+            self.state = self.State.DONE

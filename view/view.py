@@ -1,4 +1,6 @@
+import threading
 import customtkinter as ctk
+import re
 
 ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -8,6 +10,7 @@ class View(ctk.CTk):
         super().__init__()
 
         self.controller = controller
+        self.update_time = 1
         self.initialize_interface()
 
     def initialize_interface(self):
@@ -71,25 +74,24 @@ class View(ctk.CTk):
 
         self.progress_bar = ctk.CTkProgressBar(self.progress_frame, width=1000, height=20)
         self.progress_bar.pack(side="left", fill="x", expand=True, padx=10)
+        self.progress_bar.set(0)
 
-        self.progress_percentage = ctk.CTkLabel(self.progress_frame, text="", font=("Fira Sans", 12))
+        self.progress_percentage = ctk.CTkLabel(self.progress_frame, text="0%", font=("Fira Sans", 12))
         self.progress_percentage.pack(side="left", padx=10)
-        self.update_progress_percentage() # temporary
 
         # Log
         self.progress_log_frame = ctk.CTkFrame(self, fg_color='transparent')
         self.progress_log_frame.pack(pady=10, fill="x")
 
-        self.progress_log = ctk.CTkTextbox(self.progress_log_frame, width=100, height=10)
+        self.progress_log = ctk.CTkLabel(self.progress_log_frame, text='')
         self.progress_log.pack(side="left", fill="y", expand=True)
 
         # Audio file settings window
 
         # Trim window
 
-        # Condition checking
-        self.after(500, self.update_progress_percentage)
-
+        # Updating values
+        self.update_progress_bar()
 
 
     def select_directory(self):
@@ -102,9 +104,10 @@ class View(ctk.CTk):
             self.path_entry.configure(state="disabled")
     
     def download(self):
-        if not self.controller.is_downloading:
+        if not self.controller.state == self.controller.State.DOWNLOADING:
             self.controller.url = self.url_entry.get()
-            self.controller.download()
+            download_thread = threading.Thread(target=self.controller.download)
+            download_thread.start()
 
     def trim(self):
         print("trim")
@@ -112,9 +115,22 @@ class View(ctk.CTk):
     def file_settings(self):
         print("file settings")
     
-    def update_progress_percentage(self):
-        progress = '0%'
-        if self.controller.is_downloading:
-            progress = self.controller.download_status['progress']
-        self.progress_percentage.configure(text=f"{progress}")
+    def update_progress_bar(self):
+        if self.controller.state == self.controller.State.DOWNLOADING:
+            progress_str = self.__remove_ansi_escape_sequences(self.controller.download_status['progress'])
+            self.progress_percentage.configure(text=f"{progress_str}")
+            progress = float(progress_str.replace('%', ''))
+            self.progress_bar.set(progress / 100)
+        
+        # Update progress bar every n milliseconds
+        self.after(self.update_time, self.update_progress_bar)
+    
+    def update_logs(self):
+       
+
+        self.after(self.update_time, self.update_logs)
+    
+    def __remove_ansi_escape_sequences(self, s):
+        ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+        return ansi_escape.sub('', s)
         
