@@ -7,6 +7,15 @@ from random import randint
 from enum import Enum
 
 class Controller:
+    @staticmethod
+    class State(Enum):
+            IDLE = 0
+            REQUEST = 1
+            DOWNLOADING = 2
+            EXTRACTING = 3
+            TRIMMING = 4
+            DONE = 5
+
     def __init__(self) -> None:
         self.ydl_opts: Dict[any] = {
             'format': 'mp3/bestaudio/best',
@@ -18,7 +27,6 @@ class Controller:
             'noplaylist': True,
             'progress_hooks': [self.__progress_hook]
         }
-
         self.url: str = ''
         self.default_save_dir: str = f'{os.getcwd()}/downloads/'
         self.save_dir: str = ''
@@ -28,15 +36,7 @@ class Controller:
         self.download_status: Dict[any] = {'progress': '', 'eta': '', 'speed': '', 
                                             'file_size': '', 'elapsed_time': ''}
         self.is_downloading: bool = False
-        self.state: int = self.State.IDLE
-
-        class State(Enum):
-            IDLE = 0
-            REQUEST = 1
-            DOWNLOADING = 2
-            EXTRACTING = 3
-            TRIMMING = 4
-            DONE = 5
+        self.state: int = Controller.State.IDLE
 
     @property
     def save_path(self) -> str:
