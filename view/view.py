@@ -8,11 +8,13 @@ class View(ctk.CTk):
         super().__init__()
 
         self.controller = controller
+        self.initialize_interface()
 
+    def initialize_interface(self):
         # App interface
 
         self.title("MP3 YouTube Downloader")
-        self.geometry(f"{1100}x{580}")
+        self.geometry(f"{1200}x{480}")
 
         # Title
         self.title_label = ctk.CTkLabel(self, text="MP3 YouTube Downloader", font=("Fira Sans", 20, 'bold'))
@@ -27,7 +29,6 @@ class View(ctk.CTk):
 
         self.url_entry = ctk.CTkEntry(self.url_frame, width=400, placeholder_text='Insert URL here')
         self.url_entry.pack(side="left", fill="x", expand=True)
-        self.url_entry.bind("<KeyRelease>", self.update_url)
 
         # Path saved files
         self.path_label = ctk.CTkLabel(self, text="Path of saved files", font=("Fira Sans", 12))
@@ -85,7 +86,11 @@ class View(ctk.CTk):
         # Audio file settings window
 
         # Trim window
-        
+
+        # Condition checking
+        self.after(500, self.update_progress_percentage)
+
+
 
     def select_directory(self):
         path = ctk.filedialog.askdirectory()
@@ -93,14 +98,13 @@ class View(ctk.CTk):
             self.path_entry.configure(state="normal")
             self.path_entry.delete(0, ctk.END)
             self.path_entry.insert(0, path)
+            self.controller.save_dir = path
             self.path_entry.configure(state="disabled")
     
-    def update_url(self, event):
-        self.controller.url = self.url_entry.get()
-        print(self.controller.url)
-    
     def download(self):
-        print("download")
+        if not self.controller.is_downloading:
+            self.controller.url = self.url_entry.get()
+            self.controller.download()
 
     def trim(self):
         print("trim")
@@ -109,4 +113,8 @@ class View(ctk.CTk):
         print("file settings")
     
     def update_progress_percentage(self):
-        self.progress_percentage.configure(text=f"{0}%")
+        progress = '0%'
+        if self.controller.is_downloading:
+            progress = self.controller.download_status['progress']
+        self.progress_percentage.configure(text=f"{progress}")
+        

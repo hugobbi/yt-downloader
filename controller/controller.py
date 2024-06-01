@@ -21,10 +21,12 @@ class Controller:
         self.url: str = ''
         self.default_save_dir: str = f'{os.getcwd()}/downloads/'
         self.save_dir: str = ''
+        self.custom_filename: str = ''
         self.save_filename: str = ''
         self.trim_timestamps: Dict[List[int | float]] = {'start': [0, 0, 0], 'end': [0, 0, 0]}
         self.download_status: Dict[any] = {'progress': '', 'eta': '', 'speed': '', 
                                             'file_size': '', 'elapsed_time': ''}
+        self.is_downloading: bool = False
 
     @property
     def save_path(self) -> str:
@@ -36,7 +38,7 @@ class Controller:
                 os.makedirs('downloads', exist_ok=True)
                 self.save_dir = self.default_save_dir
 
-            if self.save_filename == '':
+            if self.custom_filename == '':
                 self.save_filename = f'%(title)s_{randint(0, 1000)}'  
         
             self.ydl_opts['outtmpl']['default'] = self.save_path
@@ -61,7 +63,9 @@ class Controller:
             self.download_status['progress'] = d['_percent_str']
             self.download_status['eta'] = d['_eta_str']
             self.download_status['speed'] = d['_speed_str']
+            self.is_downloading = True        
         if d['status'] == 'finished':
             self.save_filename = os.path.split(d['filename'])[1] + '.mp3' # Adding extension to filename variable (yt_dlp adds by default to saved file)
             self.download_status['file_size'] = d['total_bytes']
             self.download_status['elapsed_time'] = d['elapsed']
+            self.is_downloading = False
