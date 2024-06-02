@@ -83,7 +83,7 @@ class View(ctk.CTk):
         self.progress_log_frame = ctk.CTkFrame(self, fg_color='transparent')
         self.progress_log_frame.pack(pady=10, fill="x")
 
-        self.progress_log = ctk.CTkLabel(self.progress_log_frame, text='')
+        self.progress_log = ctk.CTkLabel(self.progress_log_frame, text="", font=("Fira Sans", 12))
         self.progress_log.pack(side="left", fill="y", expand=True)
 
         # Audio file settings window
@@ -92,10 +92,11 @@ class View(ctk.CTk):
 
         # Updating values
         self.update_progress_bar()
+        self.update_logs()
 
 
     def select_directory(self):
-        path = ctk.filedialog.askdirectory()
+        path = ctk.filedialog.askdirectory(mustexist=True, title="Select directory to save files")
         if path:
             self.path_entry.configure(state="normal")
             self.path_entry.delete(0, ctk.END)
@@ -116,18 +117,44 @@ class View(ctk.CTk):
         print("file settings")
     
     def update_progress_bar(self):
+        # if self.controller.state == self.controller.State.IDLE:
+        #     self.progress_label.grid_remove()
+        #     self.progress_percentage.grid_remove()
+        #     self.progress_bar.grid_remove()
+        # else:
+        #     self.progress_label.grid()
+        #     self.progress_percentage.grid()
+        #     self.progress_bar.grid()
+
         if self.controller.state == self.controller.State.DOWNLOADING:
             progress_str = self.__remove_ansi_escape_sequences(self.controller.download_status['progress'])
             self.progress_percentage.configure(text=f"{progress_str}")
             progress = float(progress_str.replace('%', ''))
             self.progress_bar.set(progress / 100)
+
+        if self.controller.state == self.controller.State.POSTPROCESSING:
+            self.progress_percentage.configure(text="100%")
+            self.progress_bar.set(1)
         
         # Update progress bar every n milliseconds
         self.after(self.update_time, self.update_progress_bar)
     
     def update_logs(self):
-       
-
+        if self.controller.state == self.controller.State.IDLE:
+            self.progress_log.configure(text="")
+        if self.controller.state == self.controller.State.REQUEST:
+            self.progress_log.configure(text="Requesting information...")
+        if self.controller.state == self.controller.State.DOWNLOADING:
+            self.progress_log.configure(text=f"Downloading... SPEED {self.controller.download_status['speed']} ETA {self.controller.download_status['eta']}")
+        if self.controller.state == self.controller.State.POSTPROCESSING:
+            self.progress_log.configure(text="Postprocessing...")
+        if self.controller.state == self.controller.State.DONE:
+            trim_info = "" if not self.controller.should_trim else f", {self.controller.trim_filepath}"
+            self.progress_log.configure(text=f"Done! File saved at {self.controller.save_path}{trim_info}")
+        if self.controller.state == self.controller.State.ERROR:
+            self.progress_log.configure(text=f"An error occured: {self.controller.error_message}")
+        
+        # Update logs every n milliseconds
         self.after(self.update_time, self.update_logs)
     
     def __remove_ansi_escape_sequences(self, s):
