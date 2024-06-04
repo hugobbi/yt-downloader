@@ -51,7 +51,9 @@ class Controller:
                 self.save_dir = self.default_save_dir
 
             if self.custom_filename == '':
-                self.save_filename = f'%(title)s_{randint(0, 1000)}'  
+                self.save_filename = f'%(title)s_{randint(0, 1000)}'
+            else:
+                self.save_filename = self.custom_filename
         
             self.ydl_opts['outtmpl']['default'] = self.save_path
 

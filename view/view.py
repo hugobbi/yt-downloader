@@ -127,33 +127,39 @@ class View(ctk.CTk):
         print("audio settings")
     
     def update_progress_bar(self):
-        if self.controller.state == self.controller.State.DOWNLOADING:
-            progress_str = self.__remove_ansi_escape_sequences(self.controller.download_status['progress'])
-            self.progress_percentage.configure(text=f"{progress_str}")
-            progress = float(progress_str.replace('%', ''))
-            self.progress_bar.set(progress / 100)
-
-        if self.controller.state == self.controller.State.POSTPROCESSING:
-            self.progress_percentage.configure(text="100%")
-            self.progress_bar.set(1)
-        
+        # Note: the state of the program is checked in order to avoid
+        # useless computation when not needed
+        match self.controller.state:
+            case self.controller.State.REQUEST:
+                self.progress_percentage.configure(text="0%")
+                self.progress_bar.set(0)
+            case self.controller.State.DOWNLOADING:
+                progress_str = self.__remove_ansi_escape_sequences(self.controller.download_status['progress'])
+                self.progress_percentage.configure(text=f"{progress_str}")
+                progress = float(progress_str.replace('%', ''))
+                self.progress_bar.set(progress / 100)
+            case self.controller.State.POSTPROCESSING:
+                self.progress_percentage.configure(text="100%")
+                self.progress_bar.set(1)
+  
         # Update progress bar every n milliseconds
         self.after(self.update_time, self.update_progress_bar)
     
     def update_logs(self):
-        if self.controller.state == self.controller.State.IDLE:
-            self.progress_log.configure(text="")
-        if self.controller.state == self.controller.State.REQUEST:
-            self.progress_log.configure(text="Requesting information...")
-        if self.controller.state == self.controller.State.DOWNLOADING:
-            self.progress_log.configure(text=f"Downloading... SPEED {self.controller.download_status['speed']} ETA {self.controller.download_status['eta']}")
-        if self.controller.state == self.controller.State.POSTPROCESSING:
-            self.progress_log.configure(text="Postprocessing...")
-        if self.controller.state == self.controller.State.DONE:
-            trim_info = "" if not self.controller.should_trim else f", {self.controller.trim_filepath}"
-            self.progress_log.configure(text=f"Done! File saved at {self.controller.save_path}{trim_info}")
-        if self.controller.state == self.controller.State.ERROR:
-            self.progress_log.configure(text=f"An error occured: {self.controller.error_message}")
+        match self.controller.state:
+            case self.controller.State.IDLE:
+                self.progress_log.configure(text="")
+            case self.controller.State.REQUEST:
+                self.progress_log.configure(text="Requesting information...")
+            case self.controller.State.DOWNLOADING:
+                self.progress_log.configure(text=f"Downloading... SPEED {self.controller.download_status['speed']} ETA {self.controller.download_status['eta']}")
+            case self.controller.State.POSTPROCESSING:
+                self.progress_log.configure(text="Postprocessing...")
+            case self.controller.State.DONE:
+                trim_info = "" if not self.controller.should_trim else f", {self.controller.trim_filepath}"
+                self.progress_log.configure(text=f"Done! File saved at {self.controller.save_path}{trim_info}")
+            case self.controller.State.ERROR:
+                self.progress_log.configure(text=f"An error occured: {self.controller.error_message}")
         
         # Update logs every n milliseconds
         self.after(self.update_time, self.update_logs)
@@ -179,6 +185,10 @@ class AudioFileView(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
 
+        self.controller = parent.controller
+        self.initialize_interface()
+    
+    def initialize_interface(self) -> None:
         self.title("Audio settings")
         self.geometry(f"{600}x{400}")
 
@@ -190,10 +200,14 @@ class AudioFileView(ctk.CTkToplevel):
         self.label = ctk.CTkLabel(self, text="File name", font=("Fira Sans", 12))
         self.label.pack(pady=5, padx=10, anchor='w')
 
-        self.file_name_entry = ctk.CTkEntry(self, width=400, placeholder_text="Insert file name here")
+        self.file_name_entry = ctk.CTkEntry(self, width=400, placeholder_text="Insert file name here" if self.controller.custom_filename == "" else self.controller.custom_filename)
         self.file_name_entry.pack(anchor="w", padx=10, fill="x")
-        # save when closing window or when edit file name (do this by creating event)
+        self.file_name_entry.bind("<KeyRelease>", self.update_file_name)
 
         # Trim file
+
+    def update_file_name(self, event) -> None:
+        self.controller.custom_filename = self.file_name_entry.get()
+        print(self.controller.custom_filename)
 
         
