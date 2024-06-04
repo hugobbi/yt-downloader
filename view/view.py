@@ -111,21 +111,22 @@ class View(ctk.CTk):
             download_thread.start()
 
     def trim(self):
+        def start_trim_view():
+            trim_view = TrimView(self)
+            trim_view.mainloop()
+
+        self.after(0, start_trim_view)
         print("trim")
     
     def file_settings(self):
-        print("file settings")
+        def start_audio_file_settings():
+            audio_view = AudioFileView(self)
+            audio_view.mainloop()
+
+        self.after(0, start_audio_file_settings)
+        print("audio settings")
     
     def update_progress_bar(self):
-        # if self.controller.state == self.controller.State.IDLE:
-        #     self.progress_label.grid_remove()
-        #     self.progress_percentage.grid_remove()
-        #     self.progress_bar.grid_remove()
-        # else:
-        #     self.progress_label.grid()
-        #     self.progress_percentage.grid()
-        #     self.progress_bar.grid()
-
         if self.controller.state == self.controller.State.DOWNLOADING:
             progress_str = self.__remove_ansi_escape_sequences(self.controller.download_status['progress'])
             self.progress_percentage.configure(text=f"{progress_str}")
@@ -160,4 +161,39 @@ class View(ctk.CTk):
     def __remove_ansi_escape_sequences(self, s):
         ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
         return ansi_escape.sub('', s)
+
+class TrimView(ctk.CTkToplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.title("Trim")
+        self.geometry(f"{600}x{400}")
+
+        self.label = ctk.CTkLabel(self, text="Trim")
+        self.label.pack(pady=10)
+
+        self.close_button = ctk.CTkButton(self, text="Close", command=self.destroy)
+        self.close_button.pack(pady=10)
+
+class AudioFileView(ctk.CTkToplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.title("Audio settings")
+        self.geometry(f"{600}x{400}")
+
+        # Window title
+        self.label = ctk.CTkLabel(self, text="Audio file settings", font=("Fira Sans", 12, "bold"))
+        self.label.pack(pady=10)
+
+        # File name
+        self.label = ctk.CTkLabel(self, text="File name", font=("Fira Sans", 12))
+        self.label.pack(pady=5, padx=10, anchor='w')
+
+        self.file_name_entry = ctk.CTkEntry(self, width=400, placeholder_text="Insert file name here")
+        self.file_name_entry.pack(anchor="w", padx=10, fill="x")
+        # save when closing window or when edit file name (do this by creating event)
+
+        # Trim file
+
         
