@@ -35,6 +35,7 @@ class Controller:
         self.save_filename: str = ''
         self.trim_filepath: str = ''
         self.trim_timestamps: Dict[List[int | float]] = {'start': [0, 0, 0], 'end': [0, 0, 0]}
+        self.trimmed_download: bool = False
         self.download_status: Dict[any] = {'progress': '', 'eta': '', 'speed': '', 
                                             'file_size': '', 'elapsed_time': ''}
         self.state: int = Controller.State.IDLE
@@ -69,7 +70,11 @@ class Controller:
             ydl.download([self.url])
             if self.should_trim:
                 self.trim_audio_file(self.save_path)
+                self.trimmed_download = True
+            else:
+                self.trimmed_download = False
             self.state = Controller.State.DONE
+            self.reset_file_settings()
     
     @property
     def should_trim(self) -> bool:
@@ -124,4 +129,10 @@ class Controller:
         self.default_save_dir = path
         self.save_config()
     
+    def reset_file_settings(self) -> None:
+        self.custom_filename = ''
+        self.trim_timestamps = {'start': [0, 0, 0], 'end': [0, 0, 0]}
     
+    def reset_trim_settings(self) -> None:
+        self.trim_filepath = ''
+        self.trim_timestamps = {'start': [0, 0, 0], 'end': [0, 0, 0]}

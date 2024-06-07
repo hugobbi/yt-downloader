@@ -12,6 +12,8 @@ class View(ctk.CTk):
 
         self.controller = controller
         self.update_time = 1
+        self.trim_view = None
+        self.audio_settings_view = None
         self.initialize_interface()
 
     def initialize_interface(self):
@@ -111,19 +113,21 @@ class View(ctk.CTk):
             download_thread.start()
 
     def trim(self):
-        def start_trim_view():
-            trim_view = TrimView(self)
-            trim_view.mainloop()
+        if not self.trim_view:
+            def start_trim_view():
+                self.trim_view = TrimView(self)
+                self.trim_view.mainloop()
 
-        self.after(0, start_trim_view)
+            self.after(0, start_trim_view)
     
     def file_settings(self):
-        def start_audio_file_settings():
-            audio_view = AudioFileView(self)
-            audio_view.mainloop()
+        if not self.audio_settings_view:
+            def start_audio_file_settings():
+                self.audio_settings_view = AudioFileView(self)
+                self.audio_settings_view.mainloop()
 
-        self.after(0, start_audio_file_settings)
-    
+            self.after(0, start_audio_file_settings)
+        
     def update_progress_bar(self):
         # Note: the state of the program is checked in order to avoid
         # useless computation when not needed
@@ -145,8 +149,6 @@ class View(ctk.CTk):
     
     def update_logs(self):
         match self.controller.state:
-            case self.controller.State.IDLE:
-                self.progress_log.configure(text="")
             case self.controller.State.REQUEST:
                 self.progress_log.configure(text="Requesting information...")
             case self.controller.State.DOWNLOADING:
@@ -154,7 +156,7 @@ class View(ctk.CTk):
             case self.controller.State.POSTPROCESSING:
                 self.progress_log.configure(text="Postprocessing...")
             case self.controller.State.DONE:
-                trim_info = "" if not self.controller.should_trim else f", {self.controller.trim_filepath}"
+                trim_info = "" if not self.controller.trimmed_download else f",\n{self.controller.trim_filepath}"
                 self.progress_log.configure(text=f"Done! File saved at {self.controller.save_path}{trim_info}")
             case self.controller.State.ERROR:
                 self.progress_log.configure(text=f"An error occured: {self.controller.error_message}")
@@ -251,9 +253,7 @@ class TrimView(ctk.CTkToplevel):
         self.separator_label = ctk.CTkLabel(self.trim_frame, text="-", font=("Fira Sans", 12))
         self.separator_label.pack(padx=10, side="left")
 
-        # End time
-        hour, minute,second = self.parent.controller.trim_timestamps['end']
-        
+        # End time        
         self.end_hour_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text="hh", justify="center")
         self.end_hour_entry.pack(padx=5, side="left")
         self.end_hour_entry.bind("<KeyRelease>", 
@@ -285,17 +285,26 @@ class TrimView(ctk.CTkToplevel):
         self.close_button = ctk.CTkButton(self.bottom_buttons, text="Trim", height=50, width=100, command=self.trim)
         self.close_button.pack(padx=10)
         
-        self.close_button = ctk.CTkButton(self.bottom_buttons, text="Back", command=self.destroy)
+        self.close_button = ctk.CTkButton(self.bottom_buttons, text="Back", command=self.on_exit)
         self.close_button.pack(pady=15, side="bottom")
+
+        self.protocol("WM_DELETE_WINDOW", self.on_exit)
+
+    def on_exit(self):
+        self.parent.controller.reset_trim_settings()
+        self.parent.trim_view = None
+        self.destroy()
     
     def select_file(self):
-        path = ctk.filedialog.askopenfilename(title="Select file to be trimmed")
-        if path:
+        filepath = ctk.filedialog.askopenfilename(title="Select file to be trimmed")
+        if filepath:
             self.path_entry.configure(state="normal")
             self.path_entry.delete(0, ctk.END)
-            self.path_entry.insert(0, path)
-            self.parent.controller.trim_filepath = path
+            self.path_entry.insert(0, filepath)
+            self.parent.controller.trim_filepath = filepath
             self.path_entry.configure(state="disabled")
+        # Avoids the window to hide behind every open window
+        self.lift()
     
     def trim(self):
         self.parent.controller.trim_audio_file(self.parent.controller.trim_filepath)
@@ -388,8 +397,14 @@ class AudioFileView(ctk.CTkToplevel):
                                    self.parent.set_trim_timestamp(event, value, timestamp_config))
 
         # Back button
-        self.back_button = ctk.CTkButton(self, text="Back", command=self.destroy)
+        self.back_button = ctk.CTkButton(self, text="Back", command=self.on_exit)
         self.back_button.pack(pady=15, side="bottom")
+
+        self.protocol("WM_DELETE_WINDOW", self.on_exit)
+
+    def on_exit(self):
+        self.parent.audio_settings_view = None
+        self.destroy()
 
     def set_file_name(self, event) -> None:
         self.parent.controller.custom_filename = self.file_name_entry.get()
