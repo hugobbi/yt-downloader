@@ -1,7 +1,7 @@
 import threading
 import customtkinter as ctk
 from typing import Dict
-import re
+from utils.utils import remove_ansi_escape_sequences
 
 ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -44,6 +44,10 @@ class View(ctk.CTk):
         self.path_entry = ctk.CTkEntry(self.path_frame, width=400, placeholder_text=self.controller.default_save_dir)
         self.path_entry.pack(side="left", fill="x", expand=True)
         self.path_entry.configure(state='disabled')
+
+        # Set default path button
+        self.default_path_button = ctk.CTkButton(self.path_frame, text="Set as default path", command=self.set_default_path)
+        self.default_path_button.pack(side="right", padx=0)
 
         # Path edit button
         self.select_button = ctk.CTkButton(self.path_frame, text="Edit", command=self.select_directory)
@@ -91,7 +95,6 @@ class View(ctk.CTk):
         self.update_progress_bar()
         self.update_logs()
 
-
     def select_directory(self):
         path = ctk.filedialog.askdirectory(mustexist=True, title="Select directory to save files")
         if path:
@@ -129,7 +132,7 @@ class View(ctk.CTk):
                 self.progress_percentage.configure(text="0%")
                 self.progress_bar.set(0)
             case self.controller.State.DOWNLOADING:
-                progress_str = self.__remove_ansi_escape_sequences(self.controller.download_status['progress'])
+                progress_str = remove_ansi_escape_sequences(self.controller.download_status['progress'])
                 self.progress_percentage.configure(text=f"{progress_str}")
                 progress = float(progress_str.replace('%', ''))
                 self.progress_bar.set(progress / 100)
@@ -159,10 +162,6 @@ class View(ctk.CTk):
         # Update logs every n milliseconds
         self.after(self.update_time, self.update_logs)
     
-    def __remove_ansi_escape_sequences(self, s):
-        ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-        return ansi_escape.sub('', s)
-    
     def set_trim_timestamp(self, event, entry, timestamp_config: Dict[str, str]) -> None:
         value = entry.get()
         value = 0 if value == '' else value
@@ -183,6 +182,11 @@ class View(ctk.CTk):
         time = TIMESTAMP_CONVERSION_DICT[timestamp_config['time']] # Hour, minute or second
 
         self.controller.trim_timestamps[time_point][time] = value
+    
+    def set_default_path(self):
+        path = self.path_entry.get()
+        if path != '':
+            self.controller.set_default_save_dir(path)
 
 class TrimView(ctk.CTkToplevel):
     def __init__(self, parent):

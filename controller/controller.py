@@ -1,5 +1,6 @@
 import yt_dlp
 import os
+import json
 from pydub import AudioSegment
 from utils.utils import get_time_milliseconds
 from typing import Dict, List
@@ -38,6 +39,9 @@ class Controller:
                                             'file_size': '', 'elapsed_time': ''}
         self.state: int = Controller.State.IDLE
         self.error_message: str = ''
+
+        # Loads config from file
+        self.load_config()
 
     @property
     def save_path(self) -> str:
@@ -94,3 +98,25 @@ class Controller:
         if d['status'] == 'error':
             self.state = self.State.ERROR
             self.error_message = d['error']
+        
+    def save_config(self) -> None:
+        config = {
+            'default_save_dir': self.default_save_dir,
+        }
+        with open('config.json', 'w') as f:
+            json.dump(config, f)
+    
+    def load_config(self) -> None:
+        try:
+            with open('config.json', 'r') as f:
+                config = json.load(f)
+                self.default_save_dir = config['default_save_dir']
+        except FileNotFoundError:
+            self.save_config()
+            self.load_config()
+    
+    def set_default_save_dir(self, path: str) -> None:
+        self.default_save_dir = path
+        self.save_config()
+    
+    

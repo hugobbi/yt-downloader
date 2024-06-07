@@ -1,5 +1,6 @@
 import time
 import os
+import re
 from typing import List
 
 def get_current_time_string() -> str:
@@ -16,3 +17,7 @@ def get_latest_file(directory: str) -> str:
     latest_file = max(files, key=lambda f: os.path.getctime(os.path.join(directory, f)))
 
     return latest_file
+
+def remove_ansi_escape_sequences(s):
+        ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+        return ansi_escape.sub('', s)
