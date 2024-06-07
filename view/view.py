@@ -59,7 +59,7 @@ class View(ctk.CTk):
         self.settings_button_frame = ctk.CTkFrame(self, fg_color='transparent')
         self.settings_button_frame.pack(pady=10)
 
-        self.file_settings_button = ctk.CTkButton(self.settings_button_frame, text="Audio file settings", command=self.file_settings)
+        self.file_settings_button = ctk.CTkButton(self.settings_button_frame, text="Audio file settings", command=self.open_audio_file_settings_view)
         self.file_settings_button.pack(side="left")
 
         # Download and trim buttons
@@ -69,7 +69,7 @@ class View(ctk.CTk):
         self.download_button = ctk.CTkButton(self.action_button_frame, text="Download", height=50, command=self.download)
         self.download_button.pack(side="left")
 
-        self.trim_button = ctk.CTkButton(self.action_button_frame, text="Trim", height=50, command=self.trim)
+        self.trim_button = ctk.CTkButton(self.action_button_frame, text="Trim", height=50, command=self.open_trim_view)
         self.trim_button.pack(side="right", padx=20)
 
         # Download progress
@@ -112,7 +112,9 @@ class View(ctk.CTk):
             download_thread = threading.Thread(target=self.controller.download)
             download_thread.start()
 
-    def trim(self):
+    def open_trim_view(self):
+        self.previous_trim_settings = self.controller.save_trim_settings()
+        self.controller.reset_trim_settings()
         if not self.trim_view:
             def start_trim_view():
                 self.trim_view = TrimView(self)
@@ -120,7 +122,7 @@ class View(ctk.CTk):
 
             self.after(0, start_trim_view)
     
-    def file_settings(self):
+    def open_audio_file_settings_view(self):
         if not self.audio_settings_view:
             def start_audio_file_settings():
                 self.audio_settings_view = AudioFileView(self)
@@ -158,6 +160,8 @@ class View(ctk.CTk):
             case self.controller.State.DONE:
                 trim_info = "" if not self.controller.trimmed_download else f",\n{self.controller.trim_filepath}"
                 self.progress_log.configure(text=f"Done! File saved at {self.controller.save_path}{trim_info}")
+            case self.controller.State.TRIMMED:
+                self.progress_log.configure(text=f"File trimmed and saved at {self.controller.trim_filepath}")
             case self.controller.State.ERROR:
                 self.progress_log.configure(text=f"An error occured: {self.controller.error_message}")
         
@@ -226,7 +230,9 @@ class TrimView(ctk.CTkToplevel):
         self.trim_frame.pack(pady=10)
 
         # Start time
-        self.start_hour_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text="hh", justify="center")
+        hour, minute,second = self.parent.controller.trim_timestamps['start']
+
+        self.start_hour_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text=hour if hour != 0 else "hh", justify="center")
         self.start_hour_entry.pack(padx=5, side="left")
         self.start_hour_entry.bind("<KeyRelease>", 
                                    lambda event, value=self.start_hour_entry, timestamp_config={'point': 'start', 'time': 'hour'}: 
@@ -235,7 +241,7 @@ class TrimView(ctk.CTkToplevel):
         self.separator_label = ctk.CTkLabel(self.trim_frame, text=":", font=("Fira Sans", 12))
         self.separator_label.pack(side="left")
 
-        self.start_minute_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text="mm", justify="center")
+        self.start_minute_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text=minute if minute != 0 else "mm", justify="center")
         self.start_minute_entry.pack(padx=5, side="left")
         self.start_minute_entry.bind("<KeyRelease>", 
                                    lambda event, value=self.start_minute_entry, timestamp_config={'point': 'start', 'time': 'minute'}: 
@@ -244,7 +250,7 @@ class TrimView(ctk.CTkToplevel):
         self.separator_label = ctk.CTkLabel(self.trim_frame, text=":", font=("Fira Sans", 12))
         self.separator_label.pack(side="left")
 
-        self.start_second_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text="ss", justify="center")
+        self.start_second_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text=second if second != 0 else "ss", justify="center")
         self.start_second_entry.pack(padx=5, side="left")
         self.start_second_entry.bind("<KeyRelease>", 
                                    lambda event, value=self.start_second_entry, timestamp_config={'point': 'start', 'time': 'second'}: 
@@ -253,8 +259,10 @@ class TrimView(ctk.CTkToplevel):
         self.separator_label = ctk.CTkLabel(self.trim_frame, text="-", font=("Fira Sans", 12))
         self.separator_label.pack(padx=10, side="left")
 
-        # End time        
-        self.end_hour_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text="hh", justify="center")
+        # End time
+        hour, minute,second = self.parent.controller.trim_timestamps['end']
+
+        self.end_hour_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text=hour if hour != 0 else "hh", justify="center")
         self.end_hour_entry.pack(padx=5, side="left")
         self.end_hour_entry.bind("<KeyRelease>", 
                                    lambda event, value=self.end_hour_entry, timestamp_config={'point': 'end', 'time': 'hour'}: 
@@ -263,7 +271,7 @@ class TrimView(ctk.CTkToplevel):
         self.separator_label = ctk.CTkLabel(self.trim_frame, text=":", font=("Fira Sans", 12))
         self.separator_label.pack(side="left")
 
-        self.end_minute_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text="mm", justify="center")
+        self.end_minute_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text=minute if minute != 0 else "mm", justify="center")
         self.end_minute_entry.pack(padx=5, side="left")
         self.end_minute_entry.bind("<KeyRelease>", 
                                    lambda event, value=self.end_minute_entry, timestamp_config={'point': 'end', 'time': 'minute'}: 
@@ -272,7 +280,7 @@ class TrimView(ctk.CTkToplevel):
         self.separator_label = ctk.CTkLabel(self.trim_frame, text=":", font=("Fira Sans", 12))
         self.separator_label.pack(side="left")
 
-        self.end_second_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text="ss", justify="center")
+        self.end_second_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text=second if second != 0 else "ss", justify="center")
         self.end_second_entry.pack(padx=5, side="left")
         self.end_second_entry.bind("<KeyRelease>", 
                                    lambda event, value=self.end_second_entry, timestamp_config={'point': 'end', 'time': 'second'}: 
@@ -291,7 +299,7 @@ class TrimView(ctk.CTkToplevel):
         self.protocol("WM_DELETE_WINDOW", self.on_exit)
 
     def on_exit(self):
-        self.parent.controller.reset_trim_settings()
+        self.parent.controller.load_trim_settings(self.parent.previous_trim_settings)
         self.parent.trim_view = None
         self.destroy()
     
@@ -308,6 +316,7 @@ class TrimView(ctk.CTkToplevel):
     
     def trim(self):
         self.parent.controller.trim_audio_file(self.parent.controller.trim_filepath)
+        self.on_exit()
 
 class AudioFileView(ctk.CTkToplevel):
     def __init__(self, parent):

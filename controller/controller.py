@@ -15,7 +15,8 @@ class Controller:
             DOWNLOADING = 2
             POSTPROCESSING = 3
             DONE = 4
-            ERROR = 5
+            TRIMMED = 5
+            ERROR = 6
 
     def __init__(self) -> None:
         self.ydl_opts: Dict[any] = {
@@ -67,14 +68,18 @@ class Controller:
         
             self.ydl_opts['outtmpl']['default'] = self.save_path
 
-            ydl.download([self.url])
-            if self.should_trim:
-                self.trim_audio_file(self.save_path)
-                self.trimmed_download = True
-            else:
-                self.trimmed_download = False
-            self.state = Controller.State.DONE
-            self.reset_file_settings()
+            try:
+                ydl.download([self.url])
+                if self.should_trim:
+                    self.trim_audio_file(self.save_path)
+                    self.trimmed_download = True
+                else:
+                    self.trimmed_download = False
+                self.state = Controller.State.DONE
+                self.reset_file_settings()
+            except yt_dlp.utils.DownloadError as e:
+                self.error_message = e.exc_info[1]
+                self.state = Controller.State.ERROR
     
     @property
     def should_trim(self) -> bool:
@@ -95,6 +100,7 @@ class Controller:
 
         self.trim_filepath = filepath
         audio.export(filepath, format="mp3"), print(f"[TrimAudio] Audio trimmed and saved at {filepath}")
+        self.state = Controller.State.TRIMMED
     
     def __progress_hook(self, d):
         if d['status'] == 'downloading':
@@ -138,3 +144,9 @@ class Controller:
     def reset_trim_settings(self) -> None:
         self.trim_filepath = ''
         self.trim_timestamps = {'start': [0, 0, 0], 'end': [0, 0, 0]}
+    
+    def save_trim_settings(self) -> None:
+        return [self.trim_filepath, self.trim_timestamps]
+    
+    def load_trim_settings(self, settings) -> None:
+        self.trim_filepath, self.trim_timestamps = settings
