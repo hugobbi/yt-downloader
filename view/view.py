@@ -1,5 +1,6 @@
 import threading
 import customtkinter as ctk
+from typing import Dict
 import re
 
 ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
@@ -86,10 +87,6 @@ class View(ctk.CTk):
         self.progress_log = ctk.CTkLabel(self.progress_log_frame, text="", font=("Fira Sans", 12))
         self.progress_log.pack(side="left", fill="y", expand=True)
 
-        # Audio file settings window
-
-        # Trim window
-
         # Updating values
         self.update_progress_bar()
         self.update_logs()
@@ -116,7 +113,6 @@ class View(ctk.CTk):
             trim_view.mainloop()
 
         self.after(0, start_trim_view)
-        print("trim")
     
     def file_settings(self):
         def start_audio_file_settings():
@@ -124,7 +120,6 @@ class View(ctk.CTk):
             audio_view.mainloop()
 
         self.after(0, start_audio_file_settings)
-        print("audio settings")
     
     def update_progress_bar(self):
         # Note: the state of the program is checked in order to avoid
@@ -167,47 +162,231 @@ class View(ctk.CTk):
     def __remove_ansi_escape_sequences(self, s):
         ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
         return ansi_escape.sub('', s)
+    
+    def set_trim_timestamp(self, event, entry, timestamp_config: Dict[str, str]) -> None:
+        value = entry.get()
+        value = 0 if value == '' else value
+        
+        try:
+            value = float(value) if type(value) == str and '.' in value else int(value)
+        except ValueError:
+            return
+        if value < 0:
+            raise ValueError("Value must be a positive number!")
+        
+        TIMESTAMP_CONVERSION_DICT = {
+            'hour': 0,
+            'minute': 1,
+            'second': 2
+        }
+        time_point = timestamp_config['point'] # Start or end
+        time = TIMESTAMP_CONVERSION_DICT[timestamp_config['time']] # Hour, minute or second
+
+        self.controller.trim_timestamps[time_point][time] = value
 
 class TrimView(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
 
+        self.parent = parent
+        self.initialize_interface()
+
+    def initialize_interface(self) -> None:
         self.title("Trim")
         self.geometry(f"{600}x{400}")
 
         self.label = ctk.CTkLabel(self, text="Trim")
         self.label.pack(pady=10)
 
-        self.close_button = ctk.CTkButton(self, text="Close", command=self.destroy)
-        self.close_button.pack(pady=10)
+        # Set filepath
+        self.filepath_label = ctk.CTkLabel(self, text="File path", font=("Fira Sans", 12))
+        self.filepath_label.pack(pady=5, padx=10, anchor='w')
+
+        self.path_frame = ctk.CTkFrame(self, fg_color='transparent')
+        self.path_frame.pack(pady=10, padx=10, fill="x")
+
+        self.path_entry = ctk.CTkEntry(self.path_frame, width=400, placeholder_text="File to be trimmed")
+        self.path_entry.pack(side="left", fill="x", expand=True)
+        self.path_entry.configure(state='disabled')
+
+        self.select_button = ctk.CTkButton(self.path_frame, text="Select", command=self.select_file)
+        self.select_button.pack(side="right", padx=5)
+
+        # Trim settings
+        self.label = ctk.CTkLabel(self, text="Trim file", font=("Fira Sans", 12))
+        self.label.pack(pady=5, padx=10, anchor='w')
+
+        self.trim_frame = ctk.CTkFrame(self, fg_color='transparent')
+        self.trim_frame.pack(pady=10)
+
+        # Start time
+        self.start_hour_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text="hh", justify="center")
+        self.start_hour_entry.pack(padx=5, side="left")
+        self.start_hour_entry.bind("<KeyRelease>", 
+                                   lambda event, value=self.start_hour_entry, timestamp_config={'point': 'start', 'time': 'hour'}: 
+                                   self.parent.set_trim_timestamp(event, value, timestamp_config))
+
+        self.separator_label = ctk.CTkLabel(self.trim_frame, text=":", font=("Fira Sans", 12))
+        self.separator_label.pack(side="left")
+
+        self.start_minute_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text="mm", justify="center")
+        self.start_minute_entry.pack(padx=5, side="left")
+        self.start_minute_entry.bind("<KeyRelease>", 
+                                   lambda event, value=self.start_minute_entry, timestamp_config={'point': 'start', 'time': 'minute'}: 
+                                   self.parent.set_trim_timestamp(event, value, timestamp_config))
+
+        self.separator_label = ctk.CTkLabel(self.trim_frame, text=":", font=("Fira Sans", 12))
+        self.separator_label.pack(side="left")
+
+        self.start_second_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text="ss", justify="center")
+        self.start_second_entry.pack(padx=5, side="left")
+        self.start_second_entry.bind("<KeyRelease>", 
+                                   lambda event, value=self.start_second_entry, timestamp_config={'point': 'start', 'time': 'second'}: 
+                                   self.parent.set_trim_timestamp(event, value, timestamp_config))
+
+        self.separator_label = ctk.CTkLabel(self.trim_frame, text="-", font=("Fira Sans", 12))
+        self.separator_label.pack(padx=10, side="left")
+
+        # End time
+        hour, minute,second = self.parent.controller.trim_timestamps['end']
+        
+        self.end_hour_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text="hh", justify="center")
+        self.end_hour_entry.pack(padx=5, side="left")
+        self.end_hour_entry.bind("<KeyRelease>", 
+                                   lambda event, value=self.end_hour_entry, timestamp_config={'point': 'end', 'time': 'hour'}: 
+                                   self.parent.set_trim_timestamp(event, value, timestamp_config))
+
+        self.separator_label = ctk.CTkLabel(self.trim_frame, text=":", font=("Fira Sans", 12))
+        self.separator_label.pack(side="left")
+
+        self.end_minute_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text="mm", justify="center")
+        self.end_minute_entry.pack(padx=5, side="left")
+        self.end_minute_entry.bind("<KeyRelease>", 
+                                   lambda event, value=self.end_minute_entry, timestamp_config={'point': 'end', 'time': 'minute'}: 
+                                   self.parent.set_trim_timestamp(event, value, timestamp_config))
+
+        self.separator_label = ctk.CTkLabel(self.trim_frame, text=":", font=("Fira Sans", 12))
+        self.separator_label.pack(side="left")
+
+        self.end_second_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text="ss", justify="center")
+        self.end_second_entry.pack(padx=5, side="left")
+        self.end_second_entry.bind("<KeyRelease>", 
+                                   lambda event, value=self.end_second_entry, timestamp_config={'point': 'end', 'time': 'second'}: 
+                                   self.parent.set_trim_timestamp(event, value, timestamp_config))
+
+        # Buttons
+        self.bottom_buttons = ctk.CTkFrame(self, fg_color='transparent')
+        self.bottom_buttons.pack(pady=15, fill="x", side="bottom")
+        
+        self.close_button = ctk.CTkButton(self.bottom_buttons, text="Trim", height=50, width=100, command=self.trim)
+        self.close_button.pack(padx=10)
+        
+        self.close_button = ctk.CTkButton(self.bottom_buttons, text="Back", command=self.destroy)
+        self.close_button.pack(pady=15, side="bottom")
+    
+    def select_file(self):
+        path = ctk.filedialog.askopenfilename(title="Select file to be trimmed")
+        if path:
+            self.path_entry.configure(state="normal")
+            self.path_entry.delete(0, ctk.END)
+            self.path_entry.insert(0, path)
+            self.parent.controller.trim_filepath = path
+            self.path_entry.configure(state="disabled")
+    
+    def trim(self):
+        self.parent.controller.trim_audio_file(self.parent.controller.trim_filepath)
 
 class AudioFileView(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
 
-        self.controller = parent.controller
+        self.parent = parent
         self.initialize_interface()
     
     def initialize_interface(self) -> None:
         self.title("Audio settings")
-        self.geometry(f"{600}x{400}")
+        self.geometry(f"{400}x{250}")
 
         # Window title
         self.label = ctk.CTkLabel(self, text="Audio file settings", font=("Fira Sans", 12, "bold"))
         self.label.pack(pady=10)
 
         # File name
-        self.label = ctk.CTkLabel(self, text="File name", font=("Fira Sans", 12))
+        self.label = ctk.CTkLabel(self, text="Custom file name", font=("Fira Sans", 12))
         self.label.pack(pady=5, padx=10, anchor='w')
 
-        self.file_name_entry = ctk.CTkEntry(self, width=400, placeholder_text="Insert file name here" if self.controller.custom_filename == "" else self.controller.custom_filename)
+        self.file_name_entry = ctk.CTkEntry(self, width=400, placeholder_text="Insert custom file name here" if self.parent.controller.custom_filename == "" else self.parent.controller.custom_filename)
         self.file_name_entry.pack(anchor="w", padx=10, fill="x")
-        self.file_name_entry.bind("<KeyRelease>", self.update_file_name)
+        self.file_name_entry.bind("<KeyRelease>", self.set_file_name)
 
-        # Trim file
+        # Trim settings
+        self.label = ctk.CTkLabel(self, text="Trim file", font=("Fira Sans", 12))
+        self.label.pack(pady=5, padx=10, anchor='w')
 
-    def update_file_name(self, event) -> None:
-        self.controller.custom_filename = self.file_name_entry.get()
-        print(self.controller.custom_filename)
+        self.trim_frame = ctk.CTkFrame(self, fg_color='transparent')
+        self.trim_frame.pack(pady=10)
 
+        # Start time
+        hour, minute,second = self.parent.controller.trim_timestamps['start']
+
+        self.start_hour_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text=hour if hour != 0 else "hh", justify="center")
+        self.start_hour_entry.pack(side="left", padx=5)
+        self.start_hour_entry.bind("<KeyRelease>", 
+                                   lambda event, value=self.start_hour_entry, timestamp_config={'point': 'start', 'time': 'hour'}: 
+                                   self.parent.set_trim_timestamp(event, value, timestamp_config))
+
+        self.separator_label = ctk.CTkLabel(self.trim_frame, text=":", font=("Fira Sans", 12))
+        self.separator_label.pack(side="left")
+
+        self.start_minute_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text=minute if minute != 0 else "mm", justify="center")
+        self.start_minute_entry.pack(side="left", padx=5)
+        self.start_minute_entry.bind("<KeyRelease>", 
+                                   lambda event, value=self.start_minute_entry, timestamp_config={'point': 'start', 'time': 'minute'}: 
+                                   self.parent.set_trim_timestamp(event, value, timestamp_config))
+
+        self.separator_label = ctk.CTkLabel(self.trim_frame, text=":", font=("Fira Sans", 12))
+        self.separator_label.pack(side="left")
+
+        self.start_second_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text=second if second != 0 else "ss", justify="center")
+        self.start_second_entry.pack(side="left", padx=5)
+        self.start_second_entry.bind("<KeyRelease>", 
+                                   lambda event, value=self.start_second_entry, timestamp_config={'point': 'start', 'time': 'second'}: 
+                                   self.parent.set_trim_timestamp(event, value, timestamp_config))
+
+        self.separator_label = ctk.CTkLabel(self.trim_frame, text="-", font=("Fira Sans", 12))
+        self.separator_label.pack(side="left", padx=10)
+
+        # End time
+        hour, minute,second = self.parent.controller.trim_timestamps['end']
+        
+        self.end_hour_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text=hour if hour != 0 else "hh", justify="center")
+        self.end_hour_entry.pack(side="left", padx=5)
+        self.end_hour_entry.bind("<KeyRelease>", 
+                                   lambda event, value=self.end_hour_entry, timestamp_config={'point': 'end', 'time': 'hour'}: 
+                                   self.parent.set_trim_timestamp(event, value, timestamp_config))
+
+        self.separator_label = ctk.CTkLabel(self.trim_frame, text=":", font=("Fira Sans", 12))
+        self.separator_label.pack(side="left")
+
+        self.end_minute_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text=minute if minute != 0 else "mm", justify="center")
+        self.end_minute_entry.pack(side="left", padx=5)
+        self.end_minute_entry.bind("<KeyRelease>", 
+                                   lambda event, value=self.end_minute_entry, timestamp_config={'point': 'end', 'time': 'minute'}: 
+                                   self.parent.set_trim_timestamp(event, value, timestamp_config))
+
+        self.separator_label = ctk.CTkLabel(self.trim_frame, text=":", font=("Fira Sans", 12))
+        self.separator_label.pack(side="left")
+
+        self.end_second_entry = ctk.CTkEntry(self.trim_frame, width=45, placeholder_text=second if second != 0 else "ss", justify="center")
+        self.end_second_entry.pack(side="left", padx=5)
+        self.end_second_entry.bind("<KeyRelease>", 
+                                   lambda event, value=self.end_second_entry, timestamp_config={'point': 'end', 'time': 'second'}: 
+                                   self.parent.set_trim_timestamp(event, value, timestamp_config))
+
+        # Back button
+        self.back_button = ctk.CTkButton(self, text="Back", command=self.destroy)
+        self.back_button.pack(pady=15, side="bottom")
+
+    def set_file_name(self, event) -> None:
+        self.parent.controller.custom_filename = self.file_name_entry.get()
         
