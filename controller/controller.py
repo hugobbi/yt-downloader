@@ -78,7 +78,9 @@ class Controller:
     
     @property
     def should_trim(self) -> bool:
-        return self.trim_timestamps['start'] != [0, 0, 0] and self.trim_timestamps['end'] != [0, 0, 0]
+        start = get_time_milliseconds(self.trim_timestamps['start'])
+        end = get_time_milliseconds(self.trim_timestamps['end'])
+        return end > start
 
     def trim_audio_file(self, filepath: str) -> None:
         time_start = get_time_milliseconds(self.trim_timestamps['start'])
