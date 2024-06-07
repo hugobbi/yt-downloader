@@ -48,6 +48,11 @@ class Controller:
         return os.path.join(self.save_dir, self.save_filename)
     
     def download(self) -> None:
+        if self.url == '':
+            self.error_message = 'No URL provided! >:('
+            self.state = Controller.State.ERROR
+            return
+        
         self.state = Controller.State.REQUEST
         with yt_dlp.YoutubeDL(self.ydl_opts) as ydl:
             if self.save_dir == '':
