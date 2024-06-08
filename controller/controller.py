@@ -31,7 +31,10 @@ class Controller:
             'progress_hooks': [self.__progress_hook]
         }
         self.url: str = ''
-        self.default_save_dir: str = f'{os.getcwd()}/downloads/'
+        self.__config_dir: str = os.path.join('.config', 'mp3_yt_downloader')
+        self.__config_path: str = os.path.join(self.__config_dir, 'config.json') 
+        self.__default_save_dir_name: str = 'mp3_yt_downloads'
+        self.default_save_dir: str = os.path.join(os.getcwd(), self.__default_save_dir_name)
         self.save_dir: str = ''
         self.custom_filename: str = ''
         self.save_filename: str = ''
@@ -59,7 +62,7 @@ class Controller:
         self.state = Controller.State.REQUEST
         with yt_dlp.YoutubeDL(self.ydl_opts) as ydl:
             if self.save_dir == '':
-                os.makedirs('downloads', exist_ok=True)
+                os.makedirs(self.__default_save_dir_name, exist_ok=True)
                 self.save_dir = self.default_save_dir
 
             if self.custom_filename == '':
@@ -129,12 +132,13 @@ class Controller:
         config = {
             'default_save_dir': self.default_save_dir,
         }
-        with open('config.json', 'w') as f:
+        os.makedirs(self.__config_dir, exist_ok=True)
+        with open(self.__config_path, 'w') as f:
             json.dump(config, f)
     
     def load_config(self) -> None:
         try:
-            with open('config.json', 'r') as f:
+            with open(self.__config_path, 'r') as f:
                 config = json.load(f)
                 self.default_save_dir = config['default_save_dir']
         except FileNotFoundError:

@@ -165,5 +165,8 @@ test.py
 # Vscode
 .vscode/
 
+# Downloads
+mp3_yt_downloads/
+
 # Config
-config.json
+.config
