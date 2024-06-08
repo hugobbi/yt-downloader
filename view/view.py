@@ -162,6 +162,8 @@ class View(ctk.CTk):
                 self.progress_log.configure(text=f"Done! File saved at {self.controller.save_path}{trim_info}")
             case self.controller.State.TRIMMED:
                 self.progress_log.configure(text=f"File trimmed and saved at {self.controller.trim_filepath}")
+            case self.controller.State.SAVE_DIR_CHANGED:
+                self.progress_log.configure(text=f"Default save directory changed to {self.controller.default_save_dir}")
             case self.controller.State.ERROR:
                 self.progress_log.configure(text=f"An error occured: {self.controller.error_message}")
         

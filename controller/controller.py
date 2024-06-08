@@ -16,7 +16,8 @@ class Controller:
             POSTPROCESSING = 3
             DONE = 4
             TRIMMED = 5
-            ERROR = 6
+            SAVE_DIR_CHANGED = 6
+            ERROR = 7
 
     def __init__(self) -> None:
         self.ydl_opts: Dict[any] = {
@@ -80,6 +81,7 @@ class Controller:
             except yt_dlp.utils.DownloadError as e:
                 self.error_message = e.exc_info[1]
                 self.state = Controller.State.ERROR
+                raise
     
     @property
     def should_trim(self) -> bool:
@@ -91,7 +93,13 @@ class Controller:
         time_start = get_time_milliseconds(self.trim_timestamps['start'])
         time_end = get_time_milliseconds(self.trim_timestamps['end'])
 
-        audio = AudioSegment.from_mp3(filepath)
+        try:
+            audio = AudioSegment.from_mp3(filepath)
+        except FileNotFoundError as e:
+            self.error_message = e
+            self.state = Controller.State.ERROR
+            raise
+        
         audio = audio[time_start:] if time_end == 0 else audio[time_start:time_end]
 
         directory, file = os.path.split(filepath)
@@ -136,6 +144,7 @@ class Controller:
     def set_default_save_dir(self, path: str) -> None:
         self.default_save_dir = path
         self.save_config()
+        self.state = Controller.State.SAVE_DIR_CHANGED
     
     def reset_file_settings(self) -> None:
         self.custom_filename = ''
