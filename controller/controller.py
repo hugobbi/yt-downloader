@@ -76,9 +76,6 @@ class Controller:
                 ydl.download([self.url])
                 if self.should_trim:
                     self.trim_audio_file(self.save_path)
-                    self.trimmed_download = True
-                else:
-                    self.trimmed_download = False
                 self.state = Controller.State.DONE
                 self.reset_file_settings()
             except yt_dlp.utils.DownloadError as e:
@@ -87,9 +84,24 @@ class Controller:
                 raise
     
     @property
+    def trim_timestamps_not_set(self) -> bool:
+        return self.trim_timestamps['start'] == [0, 0, 0] and self.trim_timestamps['end'] == [0, 0, 0]
+    
+    @property
     def should_trim(self) -> bool:
         start = get_time_milliseconds(self.trim_timestamps['start'])
         end = get_time_milliseconds(self.trim_timestamps['end'])
+
+        if end < start:
+            self.error_message = 'End time is before start time! >:('
+            self.state = Controller.State.ERROR
+            raise ValueError(self.error_message)
+        if start != 0 and start == end:
+            self.error_message = 'Start and end times are the same! >:('
+            self.state = Controller.State.ERROR
+            raise ValueError(self.error_message)
+        self.trimmed_download = self.state == Controller.State.POSTPROCESSING and end > start
+
         return end > start
 
     def trim_audio_file(self, filepath: str) -> None:
@@ -102,6 +114,11 @@ class Controller:
             self.error_message = e
             self.state = Controller.State.ERROR
             raise
+
+        if len(audio) <= time_start:
+            self.error_message = 'Start time greater or equal to audio length! >:('
+            self.state = Controller.State.ERROR
+            raise ValueError(self.error_message)
         
         audio = audio[time_start:] if time_end == 0 else audio[time_start:time_end]
 
@@ -155,11 +172,10 @@ class Controller:
         self.trim_timestamps = {'start': [0, 0, 0], 'end': [0, 0, 0]}
     
     def reset_trim_settings(self) -> None:
-        self.trim_filepath = ''
         self.trim_timestamps = {'start': [0, 0, 0], 'end': [0, 0, 0]}
     
-    def save_trim_settings(self) -> None:
-        return [self.trim_filepath, self.trim_timestamps]
+    def save_trim_settings(self) -> any:
+        return self.trim_timestamps
     
     def load_trim_settings(self, settings) -> None:
-        self.trim_filepath, self.trim_timestamps = settings
+        self.trim_timestamps = settings

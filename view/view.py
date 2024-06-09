@@ -17,8 +17,6 @@ class View(ctk.CTk):
         self.initialize_interface()
 
     def initialize_interface(self):
-        # App interface
-
         self.title("MP3 YouTube Downloader")
         self.geometry(f"{1200}x{480}")
 
@@ -201,6 +199,8 @@ class TrimView(ctk.CTkToplevel):
         super().__init__(parent)
 
         self.parent = parent
+        self.transient(parent)
+        self.grab_set()
         self.initialize_interface()
 
     def initialize_interface(self) -> None:
@@ -311,20 +311,24 @@ class TrimView(ctk.CTkToplevel):
             self.path_entry.configure(state="normal")
             self.path_entry.delete(0, ctk.END)
             self.path_entry.insert(0, filepath)
-            self.parent.controller.trim_filepath = filepath
             self.path_entry.configure(state="disabled")
         # Avoids the window to hide behind every open window
         self.lift()
     
     def trim(self):
-        self.parent.controller.trim_audio_file(self.parent.controller.trim_filepath)
-        self.on_exit()
+        if self.parent.controller.trim_timestamps_not_set:
+            self.parent.controller.error_message = "Trim timestamps not set!"
+            self.parent.controller.state = self.parent.controller.State.ERROR
+            raise ValueError(self.parent.controller.error_message)
+        if self.parent.controller.should_trim:
+            self.parent.controller.trim_audio_file(self.path_entry.get())
 
 class AudioFileView(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
 
         self.parent = parent
+        self.transient(parent)
         self.initialize_interface()
     
     def initialize_interface(self) -> None:
