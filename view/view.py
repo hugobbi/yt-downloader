@@ -200,8 +200,8 @@ class TrimView(ctk.CTkToplevel):
 
         self.parent = parent
         self.transient(parent)
-        self.grab_set()
         self.initialize_interface()
+        self.grab_set()
 
     def initialize_interface(self) -> None:
         self.title("Trim")
