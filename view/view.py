@@ -164,6 +164,8 @@ class View(ctk.CTk):
                 self.progress_log.configure(text=f"Default save directory changed to {self.controller.default_save_dir}")
             case self.controller.State.ERROR:
                 self.progress_log.configure(text=f"An error occured: {self.controller.error_message}")
+            case self.controller.State.SPECIAL:
+                self.progress_log.configure(text=f"{self.controller.message}")
         
         # Update logs every n milliseconds
         self.after(self.update_time, self.update_logs)

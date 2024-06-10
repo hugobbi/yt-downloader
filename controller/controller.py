@@ -18,6 +18,7 @@ class Controller:
             TRIMMED = 5
             SAVE_DIR_CHANGED = 6
             ERROR = 7
+            SPECIAL = 8
 
     def __init__(self) -> None:
         self.ydl_opts: Dict[any] = {
@@ -45,6 +46,7 @@ class Controller:
                                             'file_size': '', 'elapsed_time': ''}
         self.state: int = Controller.State.IDLE
         self.error_message: str = ''
+        self.message: str = ''
 
         # Loads config from file
         self.load_config()
@@ -57,6 +59,10 @@ class Controller:
         if self.url == '':
             self.error_message = 'No URL provided! >:('
             self.state = Controller.State.ERROR
+            return
+        elif self.url == '120523':
+            self.message = 'Oi, minha princesa! Tu é a coisa mais linda, querida, cheirosa, fofa e maravilhosa. Eu te amo muito! Fica bem <3'
+            self.state = Controller.State.SPECIAL
             return
         
         self.state = Controller.State.REQUEST
